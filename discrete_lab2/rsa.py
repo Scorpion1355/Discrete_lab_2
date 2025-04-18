@@ -1,3 +1,5 @@
+""" rsa """
+
 import random
 from hashlib import sha256
 
@@ -26,31 +28,70 @@ def mod_inv(a, m):
         x += mod0
     return x
 
-def is_prime(n):
+def is_prime(n, k=5):
     """
-    Check if a number is prime.
+    Miller Rabin prime check
     """
-    if n <= 1:
+    if n < 2:
         return False
-    for i in range(2, int(n ** 0.5) + 1):
-        if n % i == 0:
+
+    small_primes = [2,3,5,7,11,13,17,19,23]
+    for p in small_primes:
+        if n == p:
+            return True
+        if n % p == 0:
             return False
+
+    d, s = n - 1, 0
+    while d & 1 == 0:
+        d >>= 1
+        s += 1
+
+    def check(a):
+        x = pow(a, d, n)
+        if x == 1 or x == n - 1:
+            return True
+        for _ in range(s - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                return True
+        return False
+
+    for _ in range(k):
+        a = random.randrange(2, n - 1)
+        if not check(a):
+            return False
+
     return True
 
+def generate_prime_in_range(low, high):
+    """
+    Pick random odd numbers in range until one is a prime
+    """
+    if low % 2 == 0:
+        low += 1
+    while True:
+        p = random.randrange(low, high, 2)
+        if is_prime(p):
+            return p
 
-def generate_keys():
+def generate_keys(low=10**14, high=10**15):
     """
-    Generate a pair of public and private keys.
+    Generate a pair of public and private keys with large primes
     """
-    primes = [i for i in range(100, 1000) if is_prime(i)]
-    if len(primes) < 2:
-        raise ValueError("Not enough primes in the selected range")
-    p, q = random.sample(primes, 2)
-    n = p * q
+    p = generate_prime_in_range(low, high)
+    q = generate_prime_in_range(low, high)
+    while q == p:
+        q = generate_prime_in_range(low, high)
+
+    n   = p * q
     phi = (p - 1) * (q - 1)
+
+
     e = random.randrange(2, phi)
     while gcd(e, phi) != 1:
         e = random.randrange(2, phi)
+
     d = mod_inv(e, phi)
     return ((e, n), (d, n))
 
